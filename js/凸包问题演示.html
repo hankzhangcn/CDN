@@ -1,0 +1,274 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
+<style>
+    form input{
+        height: 40px;
+        margin: 20px;
+        border-radius: 10px;
+        padding-left: 10px;
+        min-width: 300px;
+        transition: box-shadow 0.25s ease;
+        outline: none;
+        border:none;
+        background-color: #e3e3e3;
+    }
+    form input:hover{
+            box-shadow:0 10px 8px rgba(0, 0, 0, 0.158);
+        }
+</style>
+<div>
+    <form class= 'form-horizontal'>
+        <fieldset>
+        <legend>ACM队的篱笆——求凸包</legend>
+            <a>键入x坐标，以空格分离</a><input id='points_x' type='text' placeholder='x1 x2 ... xn' value='0 4 1 0 4 -4 -1 3 3 0 -2'/></br>
+            <a>键入y坐标，以空格分离</a><input id='points_y' type='text' placeholder='y1 y2 ... yn' value='-1 3 1 3 0 -2 0 4 0 4 -4'/></br>
+            &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<input type='button' id='submit_dc' value='分治求解'></input></br>
+            &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<input type='button' id='submit_bf' value='基础暴力求解'></input></br>
+            &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<input type='button' id='submit_se' value='步进求解'></input></br>
+            <a>运行时间：</a><a id='rt'></a>ms</br>
+        </fieldset>
+    </form>
+</div>
+<div height="200px">
+    <canvas id="myChart" ></canvas>
+</div>
+<script>
+    var n=0
+    var s = new Array()
+    var ans = new Array()
+
+    function cmp(a,b)
+    {
+        return a.x - b.x
+    }
+    
+    function area(a,b,i)
+    {
+        return (s[b].x-s[a].x)*(s[i].y-s[a].y)-(s[b].y-s[a].y)*(s[i].x-s[a].x)
+    }
+    
+    function search_bf()
+    {
+        var i,a,b,max_area,min_area;
+        for(a=0;a<n-1;a++)
+        {
+            for(b=a+1;b<n;b++)
+            {
+                max_area=0;
+                min_area=0;
+                for(i=0;i<n;i++)
+                {
+                    if(area(a,b,i)>max_area)
+                    {
+                        max_area=area(a,b,i);
+                    }
+                    if(area(a,b,i)<min_area)
+                    {
+                        min_area=area(a,b,i);
+                    }
+                }
+                if(max_area == 0 || min_area == 0)
+                {
+                    s[a].ch=true;
+                    s[b].ch=true;
+                }
+            }
+        }
+    }
+    
+    function search_se(a,b,direction)
+    {
+        var i, j, max_area=0, c = 0,last_ch=0;
+        var flag;
+        for(i=a+1;i<b;i++)
+        {
+            flag=true;
+            if((!direction && area(a,b,i)>0) || (direction && area(a,b,i)<0) )
+                continue;
+            for(j=0;j<n;j++)
+            {
+                if((direction && area(last_ch,i,j)>0) || (!direction && area(last_ch,i,j)<0))
+                {
+                    flag = false;
+                    break;
+                }
+            }
+            if(flag)
+            {
+                s[i].ch=true;
+                last_ch = i;
+            }
+        }
+    }
+    
+    function search_dc(a,b,direction)
+    {
+        var i, max_area, c=null
+        max_area = 0
+        for(i=a+1;i<b;i++)
+        {
+            if((direction && area(a,b,i)>=max_area) || (!direction && area(a,b,i)<=max_area))
+            {
+                max_area = area(a,b,i)
+                c = i
+            }
+        }
+        if(c)
+        {
+            s[c].ch = true
+            search_dc(a,c,direction)
+            search_dc(c,b,direction)
+        }
+        return 0
+    }
+    
+    function timer(start)
+    {
+        if(start)
+            starttime = new Date().getTime()
+        endtime = new Date().getTime()
+        return endtime-starttime
+    }
+    
+    function init()
+    {
+        timer(true)
+        s.sort(cmp)
+        s[0].ch = true
+        s[n-1].ch = true
+    }
+    
+    function input()
+    {
+        var x = document.getElementById('points_x').value
+        var y = document.getElementById('points_y').value
+        x = x.split(' ').map(Number)
+        y = y.split(' ').map(Number)
+        if(x.length != y.length)
+        {
+            alert('x 和 y 不对应，数目不同。')
+            return false
+        }
+        else
+        {
+            n=x.length
+            x.map((cur,index)=>{
+                s.push({
+                    'x': x[index],
+                    'y': y[index],
+                    'ch': false,
+                })
+            })
+            return true
+        }
+    }
+    
+    function output()
+    {
+        for(var i=0;i<n;i++)
+        {
+            if(s[i].ch && area(0,n-1,i)<=0)
+                ans.push({
+                    x: s[i].x,
+                    y: s[i].y
+                })
+        }
+        for(var i=n-1;i>=0;i--)
+        {
+            if(s[i].ch && area(0,n-1,i)>0)
+                ans.push({
+                        x: s[i].x,
+                        y: s[i].y
+                    })
+        }
+        document.getElementById("rt").innerHTML = timer(false)
+        var scatterChart = new Chart(ctx,
+        {
+            type: "scatter",
+            data:
+            {
+                datasets:
+                [
+                    {
+                        label: "原数据",
+                        borderColor: "rgb(30,144,255)",
+                        data: s,
+                        pointBackgroundColor: "rgb(30,144,255)",
+                        pointRadius: 8,
+                        pointHoverRadius: 20,
+                    },
+                    {
+                        label: "凸包数据",
+                        borderColor: "rgb(255, 99, 132)",
+                        data: ans,
+                        pointBackgroundColor: "rgb(255, 99, 132)",
+                        pointRadius: 15,
+                        pointHoverRadius: 20,
+                    }
+                ]
+            },
+        });
+    }
+    
+    function clean()
+    {
+        s = new Array()
+        ans = new Array()
+        n=0
+    }
+    
+    document.getElementById('submit_dc').onclick = function(event)
+    {
+        clean()
+        input()
+        init(true)
+        search_dc(0,n-1,true)
+        search_dc(0,n-1,false)
+        output()
+    }
+    
+    document.getElementById('submit_se').onclick = function(event)
+    {
+        
+        clean()
+        input()
+        init(true)
+        search_se(0,n-1,true)
+        search_se(0,n-1,false)
+        output()
+    }
+    
+    document.getElementById('submit_bf').onclick = function(event)
+    {
+        timer(true)
+        clean()
+        input()
+        search_bf()
+        search_bf()
+        output()
+    }
+</script>
+<script>
+    var ctx = document.getElementById("myChart").getContext('2d');
+    var scatterChart = new Chart(ctx,
+    {
+        type: "scatter",
+        data:
+        {
+            datasets:
+            [
+                {
+                    label: "原数据",
+                    borderColor: "rgb(30,144,255)",
+                    data: s,
+                    pointBackgroundColor: "rgb(30,144,255)",
+                },
+                {
+                    label: "凸包数据",
+                    borderColor: "rgb(255, 99, 132)",
+                    data: ans,
+                    pointBackgroundColor: "rgb(255, 99, 132)",
+                }
+            ]
+        },
+    });
+</script>
